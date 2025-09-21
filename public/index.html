@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Executive Assistant</title>
+    <title>Asistio</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👔</text></svg>">
     <link rel="stylesheet" href="style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -12,7 +12,7 @@
     <!-- Login Screen -->
     <div id="login-screen" class="login-container">
         <div class="login-card">
-            <h1><i class="fas fa-user-tie"></i> Executive Assistant</h1>
+            <h1><i class="fas fa-user-tie"></i>Asistio</h1>
             <p>Your AI-powered productivity companion</p>
             <button id="google-login-btn" class="google-btn">
                 <i class="fab fa-google"></i> Sign in with Google
@@ -25,15 +25,15 @@
         <!-- Sidebar -->
         <nav class="sidebar">
             <div class="sidebar-header">
-                <h2><i class="fas fa-user-tie"></i> Executive Assistant</h2>
+                <h2><i class="fas fa-user-tie"></i></h2>
             </div>
             <ul class="sidebar-menu">
-                <li><a href="#" data-page="dashboard" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
-                <li><a href="#" data-page="emails"><i class="fas fa-envelope"></i> Emails</a></li>
-                <li><a href="#" data-page="calendar"><i class="fas fa-calendar-alt"></i> Calendar</a></li>
-                <li><a href="#" data-page="travel"><i class="fas fa-plane"></i> Travel</a></li>
-                <li><a href="#" data-page="settings"><i class="fas fa-cog"></i> Settings</a></li>
-                <li><a href="#" data-page="profile"><i class="fas fa-user"></i> Profile</a></li>
+                <li><a href="#" data-page="dashboard" class="active" data-tooltip="Dashboard"><i class="fas fa-tachometer-alt"></i></a></li>
+                <li><a href="#" data-page="emails" data-tooltip="Emails"><i class="fas fa-envelope"></i></a></li>
+                <li><a href="#" data-page="calendar" data-tooltip="Calendar"><i class="fas fa-calendar-alt"></i></a></li>
+                <li><a href="#" data-page="travel" data-tooltip="Travel"><i class="fas fa-plane"></i></a></li>
+                <li><a href="#" data-page="settings" data-tooltip="Settings"><i class="fas fa-cog"></i></a></li>
+                <li><a href="#" data-page="profile" data-tooltip="Profile"><i class="fas fa-user"></i></a></li>
             </ul>
             <div class="sidebar-footer">
                 <button id="logout-btn" class="logout-btn">
@@ -55,38 +55,124 @@
             </header>
 
             <!-- Dashboard Page -->
+            <!-- Dashboard Page -->
             <div id="dashboard-page" class="page active">
-                <div class="dashboard-grid">
-                    <!-- Top 5 Emails Block -->
-                    <div class="dashboard-block">
-                        <div class="block-header">
-                            <h3><i class="fas fa-envelope"></i> Top 5 Recent Emails</h3>
-                            <a href="#" data-page="emails" class="view-all">View All</a>
+                <div class="dashboard-layout">
+                    <!-- Column 1: Email Folders Panel -->
+                    <div class="email-folders-panel">
+                        <div class="folders-header">
+                            <h3><i class="fas fa-folder"></i> Folders</h3>
                         </div>
-                        <div id="top-emails" class="email-list">
+                        <div class="folders-list">
+                            <div class="folder-item active" data-folder="inbox">
+                                <i class="fas fa-inbox"></i>
+                                <span>Inbox</span>
+                                <span class="folder-count">25</span>
+                            </div>
+                            <div class="folder-item" data-folder="sent">
+                                <i class="fas fa-paper-plane"></i>
+                                <span>Sent</span>
+                                <span class="folder-count">12</span>
+                            </div>
+                            <div class="folder-item" data-folder="drafts">
+                                <i class="fas fa-edit"></i>
+                                <span>Drafts</span>
+                                <span class="folder-count">3</span>
+                            </div>
+                            <div class="folder-item" data-folder="archive">
+                                <i class="fas fa-archive"></i>
+                                <span>Archive</span>
+                                <span class="folder-count">156</span>
+                            </div>
+                            <div class="folder-item" data-folder="trash">
+                                <i class="fas fa-trash"></i>
+                                <span>Trash</span>
+                                <span class="folder-count">8</span>
+                            </div>
+                            <div class="folder-item" data-folder="spam">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span>Spam</span>
+                                <span class="folder-count">2</span>
+                            </div>
+                        </div>
+                        
+                        <div class="labels-section">
+                            <h4><i class="fas fa-tags"></i> Labels</h4>
+                            <div class="label-item">
+                                <span class="label-color" style="background: #e74c3c;"></span>
+                                <span>Important</span>
+                            </div>
+                            <div class="label-item">
+                                <span class="label-color" style="background: #f39c12;"></span>
+                                <span>Work</span>
+                            </div>
+                            <div class="label-item">
+                                <span class="label-color" style="background: #27ae60;"></span>
+                                <span>Personal</span>
+                            </div>
+                            <div class="label-item">
+                                <span class="label-color" style="background: #3498db;"></span>
+                                <span>Travel</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Column 2: Email List Panel -->
+                    <div class="email-list-panel">
+                        <div class="email-list-header">
+                            <h3><i class="fas fa-envelope"></i> Recent Emails</h3>
+                            <div class="email-controls-compact">
+                                <button class="btn-icon" title="Refresh">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                                <button class="btn-icon" title="Search">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="dashboard-emails-list" class="dashboard-emails">
                             <div class="loading">Loading emails...</div>
                         </div>
                     </div>
 
-                    <!-- Recent Travel Block -->
-                    <div class="dashboard-block">
-                        <div class="block-header">
-                            <h3><i class="fas fa-plane"></i> Recent Travel</h3>
-                            <a href="#" data-page="travel" class="view-all">View All</a>
-                        </div>
-                        <div id="recent-travel" class="travel-list">
-                            <div class="no-data">No recent travel found</div>
+                    <!-- Column 3: Email Detail Panel -->
+                    <div class="email-detail-panel">
+                        <div class="email-detail-section">
+                            <div id="dashboard-email-detail" class="dashboard-email-detail">
+                                <div class="no-email-selected">
+                                    <i class="fas fa-envelope-open"></i>
+                                    <p>Select an email to view details</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Calendar Block -->
-                    <div class="dashboard-block">
-                        <div class="block-header">
-                            <h3><i class="fas fa-calendar-alt"></i> Upcoming Events</h3>
-                            <a href="#" data-page="calendar" class="view-all">View Calendar</a>
+                    <!-- Column 4: Right Panel (Calendar + Travel) -->
+                    <div class="right-panel">
+                        <!-- Calendar Section (Top Half) -->
+                        <div class="calendar-section">
+                            <div class="section-header">
+                                <h4><i class="fas fa-calendar-alt"></i> Today's Schedule</h4>
+                                <a href="#" data-page="calendar" class="view-all-link">View All</a>
+                            </div>
+                            <div class="section-content">
+                                <div id="dashboard-calendar" class="dashboard-calendar">
+                                    <div class="loading">Loading events...</div>
+                                </div>
+                            </div>
                         </div>
-                        <div id="upcoming-events" class="calendar-list">
-                            <div class="loading">Loading events...</div>
+
+                        <!-- Travel Section (Bottom Half) -->
+                        <div class="travel-section">
+                            <div class="section-header">
+                                <h4><i class="fas fa-plane"></i> Upcoming Travel</h4>
+                                <a href="#" data-page="travel" class="view-all-link">View All</a>
+                            </div>
+                            <div class="section-content">
+                                <div id="dashboard-travel" class="dashboard-travel">
+                                    <div class="no-data">No upcoming travel</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

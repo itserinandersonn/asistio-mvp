@@ -187,13 +187,185 @@ class ExecutiveAssistant {
         }
     }
 
-    async loadDashboardData() {
-        await Promise.all([
-            this.loadTopEmails(),
-            this.loadUpcomingEvents(),
-            this.loadRecentTravel()
-        ]);
+    // Add these methods to your ExecutiveAssistant class
+
+async loadDashboardData() {
+    await Promise.all([
+        this.loadDashboardEmails(),
+        this.loadDashboardCalendar(),
+        this.loadDashboardTravel()
+    ]);
+}
+
+async loadDashboardEmails() {
+    try {
+        const response = await fetch('/api/emails?maxResults=20');
+        const data = await response.json();
+        
+        if (data.success) {
+            this.renderDashboardEmails(data.emails);
+        }
+    } catch (error) {
+        console.error('Error loading dashboard emails:', error);
+        document.getElementById('dashboard-emails-list').innerHTML = '<div class="no-data">Failed to load emails</div>';
     }
+}
+
+renderDashboardEmails(emails) {
+    const container = document.getElementById('dashboard-emails-list');
+    
+    if (!emails || emails.length === 0) {
+        container.innerHTML = '<div class="no-data">No emails found</div>';
+        return;
+    }
+
+    container.innerHTML = emails.map((email, index) => `
+        <div class="dashboard-email-item ${index === 0 ? 'selected' : ''}" onclick="app.selectDashboardEmail('${email.id}', this)">
+            <div class="dashboard-email-time">${this.formatDate(email.date)}</div>
+            <div class="dashboard-email-sender">${this.extractEmailAddress(email.from)}</div>
+            <div class="dashboard-email-subject">${email.subject || 'No Subject'}</div>
+            <div class="dashboard-email-preview">${email.snippet || 'No preview available'}</div>
+        </div>
+    `).join('');
+
+    // Auto-select first email
+    if (emails.length > 0) {
+        this.selectDashboardEmail(emails[0].id, container.querySelector('.dashboard-email-item'));
+    }
+}
+
+async selectDashboardEmail(emailId, element) {
+    // Update selected state
+    document.querySelectorAll('.dashboard-email-item').forEach(item => {
+        item.classList.remove('selected');
+    });
+    element.classList.add('selected');
+
+    // Load and show email details
+    try {
+        const response = await fetch(`/api/emails/${emailId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            this.showDashboardEmailDetail(data.email);
+        }
+    } catch (error) {
+        console.error('Error loading email detail:', error);
+    }
+}
+
+showDashboardEmailDetail(email) {
+    const container = document.getElementById('dashboard-email-detail');
+    
+    container.innerHTML = `
+        <div class="email-detail-content active">
+            <div class="detail-header">
+                <div class="detail-subject">${email.subject || 'No Subject'}</div>
+                <div class="detail-meta">
+                    <div class="detail-meta-row">
+                        <span class="detail-meta-label">From:</span>
+                        <span class="detail-meta-value">${email.from}</span>
+                    </div>
+                    <div class="detail-meta-row">
+                        <span class="detail-meta-label">To:</span>
+                        <span class="detail-meta-value">${email.to}</span>
+                    </div>
+                    <div class="detail-meta-row">
+                        <span class="detail-meta-label">Date:</span>
+                        <span class="detail-meta-value">${this.formatDate(email.date)}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="detail-body">
+                ${this.sanitizeHTML(email.body)}
+            </div>
+        </div>
+    `;
+}
+
+async loadDashboardCalendar() {
+    try {
+        const response = await fetch('/api/calendar');
+        const data = await response.json();
+        
+        if (data.success) {
+            this.renderDashboardCalendar(data.events);
+        }
+    } catch (error) {
+        console.error('Error loading dashboard calendar:', error);
+        document.getElementById('dashboard-calendar').innerHTML = '<div class="no-data">Failed to load events</div>';
+    }
+}
+
+// Update the renderDashboardCalendar method
+renderDashboardCalendar(events) {
+    const container = document.getElementById('dashboard-calendar');
+    
+    if (!events || events.length === 0) {
+        container.innerHTML = '<div class="no-data">No events today</div>';
+        return;
+    }
+
+    // Show only today's events
+    const today = new Date().toDateString();
+    const todayEvents = events.filter(event => {
+        const eventDate = new Date(event.start.dateTime || event.start.date);
+        return eventDate.toDateString() === today;
+    });
+
+    if (todayEvents.length === 0) {
+        container.innerHTML = '<div class="no-data">No events today</div>';
+        return;
+    }
+
+    container.innerHTML = todayEvents.slice(0, 8).map(event => `
+        <div class="calendar-event-compact">
+            <div class="event-time-compact">${this.formatEventTime(event.start)}</div>
+            <div class="event-title-compact">${event.summary || 'No Title'}</div>
+            ${event.location ? `<div class="event-location-compact">${event.location}</div>` : ''}
+        </div>
+    `).join('');
+}
+
+// Update the showDashboardEmailDetail method
+showDashboardEmailDetail(email) {
+    const container = document.getElementById('dashboard-email-detail');
+    
+    container.innerHTML = `
+        <div class="email-detail-content active">
+            <div class="detail-header">
+                <div class="detail-subject">${email.subject || 'No Subject'}</div>
+                <div class="detail-meta">
+                    <div class="detail-meta-row">
+                        <span class="detail-meta-label">From:</span>
+                        <span class="detail-meta-value">${email.from}</span>
+                    </div>
+                    <div class="detail-meta-row">
+                        <span class="detail-meta-label">To:</span>
+                        <span class="detail-meta-value">${email.to}</span>
+                    </div>
+                    <div class="detail-meta-row">
+                        <span class="detail-meta-label">Date:</span>
+                        <span class="detail-meta-value">${this.formatDate(email.date)}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="detail-body">
+                ${this.sanitizeHTML(email.body)}
+            </div>
+            <div class="detail-actions">
+                <button class="btn btn-primary btn-sm" onclick="app.navigateToPage('emails')">
+                    <i class="fas fa-external-link-alt"></i> Open in Emails
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+async loadDashboardTravel() {
+    const container = document.getElementById('dashboard-travel');
+    container.innerHTML = '<div class="no-data">No upcoming travel</div>';
+}
 
     async loadTopEmails() {
         try {
