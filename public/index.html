@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive Assistant</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👔</text></svg>">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="login-screen" class="login-container">
+        <div class="login-card">
+            <h1><i class="fas fa-user-tie"></i> Executive Assistant</h1>
+            <p>Your AI-powered productivity companion</p>
+            <button id="google-login-btn" class="google-btn">
+                <i class="fab fa-google"></i> Sign in with Google
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="app" class="app-container" style="display: none;">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-user-tie"></i> Executive Assistant</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="#" data-page="dashboard" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li><a href="#" data-page="emails"><i class="fas fa-envelope"></i> Emails</a></li>
+                <li><a href="#" data-page="calendar"><i class="fas fa-calendar-alt"></i> Calendar</a></li>
+                <li><a href="#" data-page="travel"><i class="fas fa-plane"></i> Travel</a></li>
+                <li><a href="#" data-page="settings"><i class="fas fa-cog"></i> Settings</a></li>
+                <li><a href="#" data-page="profile"><i class="fas fa-user"></i> Profile</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <button id="logout-btn" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <div class="welcome-message">
+                    <h1 id="welcome-text">Welcome!</h1>
+                </div>
+                <div class="user-info">
+                    <img id="user-avatar" class="user-avatar" src="" alt="User Avatar">
+                    <span id="user-name">User</span>
+                </div>
+            </header>
+
+            <!-- Dashboard Page -->
+            <div id="dashboard-page" class="page active">
+                <div class="dashboard-grid">
+                    <!-- Top 5 Emails Block -->
+                    <div class="dashboard-block">
+                        <div class="block-header">
+                            <h3><i class="fas fa-envelope"></i> Top 5 Recent Emails</h3>
+                            <a href="#" data-page="emails" class="view-all">View All</a>
+                        </div>
+                        <div id="top-emails" class="email-list">
+                            <div class="loading">Loading emails...</div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Travel Block -->
+                    <div class="dashboard-block">
+                        <div class="block-header">
+                            <h3><i class="fas fa-plane"></i> Recent Travel</h3>
+                            <a href="#" data-page="travel" class="view-all">View All</a>
+                        </div>
+                        <div id="recent-travel" class="travel-list">
+                            <div class="no-data">No recent travel found</div>
+                        </div>
+                    </div>
+
+                    <!-- Calendar Block -->
+                    <div class="dashboard-block">
+                        <div class="block-header">
+                            <h3><i class="fas fa-calendar-alt"></i> Upcoming Events</h3>
+                            <a href="#" data-page="calendar" class="view-all">View Calendar</a>
+                        </div>
+                        <div id="upcoming-events" class="calendar-list">
+                            <div class="loading">Loading events...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Emails Page -->
+            <div id="emails-page" class="page">
+                <div class="page-header">
+                    <h2><i class="fas fa-envelope"></i> Emails</h2>
+                    <div class="email-controls">
+                        <input type="text" id="email-search" placeholder="Search emails...">
+                        <button id="refresh-emails"><i class="fas fa-sync-alt"></i> Refresh</button>
+                    </div>
+                </div>
+                <div id="emails-list" class="emails-container">
+                    <div class="loading">Loading emails...</div>
+                </div>
+                <div id="email-pagination" class="pagination">
+                    <!-- Pagination will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Email Detail Modal -->
+            <div id="email-modal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 id="email-subject">Email Subject</h3>
+                        <span class="close">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div class="email-meta">
+                            <p><strong>From:</strong> <span id="email-from"></span></p>
+                            <p><strong>To:</strong> <span id="email-to"></span></p>
+                            <p><strong>Date:</strong> <span id="email-date"></span></p>
+                            <p id="email-cc-row" style="display: none;"><strong>CC:</strong> <span id="email-cc"></span></p>
+                        </div>
+                        <div id="email-body" class="email-body"></div>
+                        <div class="email-actions">
+                            <button id="reply-btn" class="btn btn-primary"><i class="fas fa-reply"></i> Reply</button>
+                            <button id="forward-btn" class="btn btn-primary"><i class="fas fa-share"></i> Forward</button>
+                            <button id="archive-btn" class="btn btn-secondary"><i class="fas fa-archive"></i> Archive</button>
+                            <button id="delete-btn" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calendar Page -->
+            <div id="calendar-page" class="page">
+                <div class="page-header">
+                    <h2><i class="fas fa-calendar-alt"></i> Calendar</h2>
+                </div>
+                <div id="calendar-events" class="calendar-container">
+                    <div class="loading">Loading calendar events...</div>
+                </div>
+            </div>
+
+            <!-- Travel Page -->
+            <div id="travel-page" class="page">
+                <div class="page-header">
+                    <h2><i class="fas fa-plane"></i> Travel</h2>
+                </div>
+                <div id="travel-options" class="travel-container">
+                    <div class="no-data">No travel information available</div>
+                </div>
+            </div>
+
+            <!-- Settings Page -->
+            <div id="settings-page" class="page">
+                <div class="page-header">
+                    <h2><i class="fas fa-cog"></i> Settings</h2>
+                </div>
+                <div class="settings-container">
+                    <div class="setting-group">
+                        <h3>AI Preferences</h3>
+                        <label>
+                            <input type="checkbox" id="auto-calendar" checked>
+                            Automatically create calendar events from emails
+                        </label>
+                        <label>
+                            <input type="checkbox" id="auto-travel" checked>
+                            Automatically suggest travel options from emails
+                        </label>
+                    </div>
+                    <div class="setting-group">
+                        <h3>Notification Settings</h3>
+                        <label>
+                            <input type="checkbox" id="email-notifications" checked>
+                            Email notifications
+                        </label>
+                        <label>
+                            <input type="checkbox" id="calendar-notifications" checked>
+                            Calendar event reminders
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Page -->
+            <div id="profile-page" class="page">
+                <div class="page-header">
+                    <h2><i class="fas fa-user"></i> User Profile</h2>
+                </div>
+                <div class="profile-container">
+                    <div class="profile-info">
+                        <img id="profile-avatar" class="profile-avatar" src="" alt="Profile Picture">
+                        <div class="profile-details">
+                            <h3 id="profile-name">User Name</h3>
+                            <p id="profile-email">user@example.com</p>
+                        </div>
+                    </div>
+                    <div class="profile-stats">
+                        <div class="stat-item">
+                            <span class="stat-number" id="total-emails">0</span>
+                            <span class="stat-label">Total Emails</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="total-events">0</span>
+                            <span class="stat-label">Calendar Events</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="ai-actions">0</span>
+                            <span class="stat-label">AI Actions Taken</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Processing with AI...</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
