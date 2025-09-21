@@ -8,7 +8,10 @@ class ExecutiveAssistant {
         this.currentEmailPage = 1;
         this.totalEmailPages = 1;
         this.pageToken = null;
-        
+        this.currentCalendarView = 'list';
+        this.currentCalendarDate = new Date();
+        this.currentEvents = [];
+    
         this.init();
     }
 
@@ -75,6 +78,23 @@ class ExecutiveAssistant {
 
         document.getElementById('archive-btn').addEventListener('click', () => {
             this.archiveCurrentEmail();
+        });
+
+        // Calendar view controls
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const view = e.target.closest('button').dataset.view;
+                this.changeCalendarView(view);
+            });
+        });
+
+        // Calendar navigation
+        document.getElementById('calendar-prev').addEventListener('click', () => {
+            this.navigateCalendar(-1);
+        });
+
+        document.getElementById('calendar-next').addEventListener('click', () => {
+            this.navigateCalendar(1);
         });
     }
 
@@ -177,7 +197,9 @@ class ExecutiveAssistant {
             const data = await response.json();
             
             if (data.success) {
-                this.renderTopEmails(data.emails);
+                // Only show top 5 emails for dashboard
+                const top5Emails = data.emails.slice(0, 5);
+                this.renderTopEmails(top5Emails);
             }
         } catch (error) {
             console.error('Error loading top emails:', error);
@@ -315,22 +337,330 @@ class ExecutiveAssistant {
     }
 
     async openEmailModal(emailId) {
-        try {
-            this.showLoadingOverlay('Loading email...');
+    try {
+        this.showLoadingOverlay('Loading email...');
+        
+        const response = await fetch(`/api/emails/${emailId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            this.showEmailModal(data.email);
+            this.currentEmailId = emailId;
+            this.currentEmail = data.email;
             
-            const response = await fetch(`/api/emails/${emailId}`);
-            const data = await response.json();
-            
-            if (data.success) {
-                this.showEmailModal(data.email);
-                this.currentEmailId = emailId;
-            }
-        } catch (error) {
-            console.error('Error loading email:', error);
-        } finally {
-            this.hideLoadingOverlay();
+            // Analyze email with AI when opened
+            await this.analyzeCurrentEmailWithAI(data.email);
         }
+    } catch (error) {
+        console.error('Error loading email:', error);
+    } finally {
+        this.hideLoadingOverlay();
     }
+}
+
+async analyzeCurrentEmailWithAI(email) {
+    try {
+        this.showLoadingOverlay('AI analyzing email...');
+        
+        const response = await fetch('/api/ai/analyze-email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email })
+        });
+
+        const data = await response.json();
+        
+        if (data.success && data.analysis) {
+            await this.handleAIAnalysisWithPopup(email, data.analysis);
+        }
+    } catch (error) {
+        console.error('Error analyzing email with AI:', error);
+    } finally {
+        this.hideLoadingOverlay();
+    }
+}
+
+async handleAIAnalysisWithPopup(email, analysis) {
+    if (analysis.type === 'meeting' && analysis.confidence > 0.6) {
+        this.showMeetingEventPopup(email, analysis);
+    } else if (analysis.type === 'travel' && analysis.confidence > 0.7) {
+        this.handleTravelEmail(email, analysis);
+    }
+}
+
+showMeetingEventPopup(email, analysis) {
+    // Create popup modal
+    const popup = document.createElement('div');
+    popup.className = 'ai-popup-overlay';
+    popup.innerHTML = `
+        <div class="ai-popup">
+            <div class="ai-popup-header">
+                <h3><i class="fas fa-robot"></i> AI Meeting Detection</h3>
+                <span class="ai-popup-close">&times;</span>
+            </div>
+            <div class="ai-popup-body">
+                <div class="ai-suggestion">
+                    <p><strong>🤖 AI detected a meeting request in this email!</strong></p>
+                    <p>Would you like me to create a calendar event?</p>
+                </div>
+                
+                <div class="event-details">
+                    <div class="form-group">
+                        <label>Event Title:</label>
+                        <input type="text" id="ai-event-title" value="${analysis.extractedData.summary || 'Meeting'}" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Date & Time:</label>
+                        <input type="datetime-local" id="ai-event-datetime" value="${this.formatDateTimeForInput(analysis.extractedData.startTime)}" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Duration (hours):</label>
+                        <select id="ai-event-duration">
+                            <option value="0.5">30 minutes</option>
+                            <option value="1" selected>1 hour</option>
+                            <option value="1.5">1.5 hours</option>
+                            <option value="2">2 hours</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Location:</label>
+                        <input type="text" id="ai-event-location" value="${analysis.extractedData.location || 'Google Meet'}" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Attendees:</label>
+                        <textarea id="ai-event-attendees" rows="3">${this.extractAttendees(email).join(', ')}</textarea>
+                        <small>Automatically detected from email participants</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Description:</label>
+                        <textarea id="ai-event-description" rows="2">${analysis.extractedData.description || 'Meeting scheduled via AI from email'}</textarea>
+                    </div>
+                </div>
+                
+                <div class="ai-popup-actions">
+                    <button class="btn btn-primary" onclick="app.createEventFromAI()">
+                        <i class="fas fa-calendar-plus"></i> Create Event
+                    </button>
+                    <button class="btn btn-secondary" onclick="app.closeAIPopup()">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add styles for popup
+    if (!document.getElementById('ai-popup-styles')) {
+        const style = document.createElement('style');
+        style.id = 'ai-popup-styles';
+        style.textContent = `
+            .ai-popup-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.7);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 2000;
+                backdrop-filter: blur(5px);
+            }
+            .ai-popup {
+                background: white;
+                border-radius: 15px;
+                width: 90%;
+                max-width: 600px;
+                max-height: 90vh;
+                overflow-y: auto;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+                animation: popupSlideIn 0.3s ease-out;
+            }
+            @keyframes popupSlideIn {
+                from { transform: scale(0.8) translateY(-50px); opacity: 0; }
+                to { transform: scale(1) translateY(0); opacity: 1; }
+            }
+            .ai-popup-header {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 20px 25px;
+                border-radius: 15px 15px 0 0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .ai-popup-header h3 {
+                margin: 0;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .ai-popup-close {
+                font-size: 24px;
+                cursor: pointer;
+                opacity: 0.8;
+                transition: opacity 0.3s;
+            }
+            .ai-popup-close:hover {
+                opacity: 1;
+            }
+            .ai-popup-body {
+                padding: 25px;
+            }
+            .ai-suggestion {
+                background: #e3f2fd;
+                border: 1px solid #2196f3;
+                border-radius: 8px;
+                padding: 15px;
+                margin-bottom: 20px;
+                text-align: center;
+            }
+            .form-group {
+                margin-bottom: 15px;
+            }
+            .form-group label {
+                display: block;
+                margin-bottom: 5px;
+                font-weight: 600;
+                color: #333;
+            }
+            .form-group input, .form-group select, .form-group textarea {
+                width: 100%;
+                padding: 10px;
+                border: 2px solid #e9ecef;
+                border-radius: 6px;
+                font-size: 14px;
+                transition: border-color 0.3s;
+            }
+            .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+                outline: none;
+                border-color: #3498db;
+            }
+            .form-group small {
+                color: #666;
+                font-size: 12px;
+            }
+            .ai-popup-actions {
+                display: flex;
+                gap: 10px;
+                justify-content: center;
+                margin-top: 20px;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(popup);
+    
+    // Close popup when clicking outside or close button
+    popup.addEventListener('click', (e) => {
+        if (e.target === popup || e.target.classList.contains('ai-popup-close')) {
+            this.closeAIPopup();
+        }
+    });
+}
+
+async createEventFromAI() {
+    try {
+        const eventData = {
+            summary: document.getElementById('ai-event-title').value,
+            startTime: new Date(document.getElementById('ai-event-datetime').value).toISOString(),
+            endTime: new Date(new Date(document.getElementById('ai-event-datetime').value).getTime() + 
+                    parseFloat(document.getElementById('ai-event-duration').value) * 60 * 60 * 1000).toISOString(),
+            location: document.getElementById('ai-event-location').value,
+            description: document.getElementById('ai-event-description').value,
+            attendees: document.getElementById('ai-event-attendees').value
+                .split(',')
+                .map(email => ({ email: email.trim() }))
+                .filter(attendee => attendee.email)
+        };
+
+        this.showLoadingOverlay('Creating calendar event...');
+        
+        const response = await fetch('/api/calendar', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(eventData)
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+            this.showNotification('✅ Calendar event created successfully!', 'success');
+            this.closeAIPopup();
+            
+            // Update AI actions counter
+            const currentCount = parseInt(document.getElementById('ai-actions').textContent) || 0;
+            document.getElementById('ai-actions').textContent = currentCount + 1;
+        } else {
+            throw new Error('Failed to create event');
+        }
+    } catch (error) {
+        console.error('Error creating event:', error);
+        this.showNotification('❌ Failed to create calendar event', 'error');
+    } finally {
+        this.hideLoadingOverlay();
+    }
+}
+
+closeAIPopup() {
+    const popup = document.querySelector('.ai-popup-overlay');
+    if (popup) {
+        popup.remove();
+    }
+}
+
+extractAttendees(email) {
+    const attendees = [];
+    
+    // Add sender
+    const fromEmail = this.extractEmailAddress(email.from);
+    if (fromEmail) attendees.push(fromEmail);
+    
+    // Add CC recipients
+    if (email.cc) {
+        const ccEmails = email.cc.split(',').map(cc => this.extractEmailAddress(cc.trim()));
+        attendees.push(...ccEmails.filter(email => email));
+    }
+    
+    // Add TO recipients (excluding current user)
+    if (email.to) {
+        const toEmails = email.to.split(',').map(to => this.extractEmailAddress(to.trim()));
+        attendees.push(...toEmails.filter(email => email && email !== this.currentUser.email));
+    }
+    
+    // Remove duplicates
+    return [...new Set(attendees)];
+}
+
+formatDateTimeForInput(dateString) {
+    if (!dateString) {
+        // Default to tomorrow at 2 PM
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(14, 0, 0, 0);
+        return tomorrow.toISOString().slice(0, 16);
+    }
+    
+    try {
+        const date = new Date(dateString);
+        return date.toISOString().slice(0, 16);
+    } catch (error) {
+        const defaultDate = new Date();
+        defaultDate.setHours(14, 0, 0, 0);
+        return defaultDate.toISOString().slice(0, 16);
+    }
+}
 
     showEmailModal(email) {
         document.getElementById('email-subject').textContent = email.subject || 'No Subject';
@@ -476,18 +806,172 @@ class ExecutiveAssistant {
 
     async loadCalendarEvents() {
         try {
-            this.showLoading('calendar-events', 'Loading calendar events...');
-            
-            const response = await fetch('/api/calendar');
-            const data = await response.json();
-            
-            if (data.success) {
-                this.renderCalendarEvents(data.events);
-            }
-        } catch (error) {
-            console.error('Error loading calendar events:', error);
-            document.getElementById('calendar-events').innerHTML = '<div class="no-data">Failed to load calendar events</div>';
+        this.showLoading('calendar-events', 'Loading calendar events...');
+        
+        const response = await fetch('/api/calendar');
+        const data = await response.json();
+        
+        if (data.success) {
+            this.currentEvents = data.events;
+            this.renderCalendarInView(data.events, this.currentCalendarView || 'list');
+            this.updateCalendarTitle();
         }
+    } catch (error) {
+        console.error('Error loading calendar events:', error);
+        document.getElementById('calendar-events').innerHTML = '<div class="no-data">Failed to load calendar events</div>';
+    }
+}
+
+changeCalendarView(view) {
+    // Update active button
+    document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`[data-view="${view}"]`).classList.add('active');
+    
+    this.currentCalendarView = view;
+    this.renderCalendarInView(this.currentEvents || [], view);
+}
+
+navigateCalendar(direction) {
+    const currentDate = this.currentCalendarDate || new Date();
+    let newDate;
+    
+    switch (this.currentCalendarView) {
+        case 'day':
+            newDate = new Date(currentDate);
+            newDate.setDate(currentDate.getDate() + direction);
+            break;
+        case 'week':
+            newDate = new Date(currentDate);
+            newDate.setDate(currentDate.getDate() + (direction * 7));
+            break;
+        case 'month':
+            newDate = new Date(currentDate);
+            newDate.setMonth(currentDate.getMonth() + direction);
+            break;
+        default: // list
+            return;
+    }
+    
+    this.currentCalendarDate = newDate;
+    this.updateCalendarTitle();
+    this.loadCalendarEvents();
+}
+
+updateCalendarTitle() {
+    const titleElement = document.getElementById('calendar-title');
+    const date = this.currentCalendarDate || new Date();
+    
+    switch (this.currentCalendarView) {
+        case 'day':
+            titleElement.textContent = date.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            break;
+        case 'week':
+            const weekStart = new Date(date);
+            weekStart.setDate(date.getDate() - date.getDay());
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            titleElement.textContent = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+            break;
+        case 'month':
+            titleElement.textContent = date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long' 
+            });
+            break;
+        default:
+            titleElement.textContent = 'All Events';
+    }
+}
+
+renderCalendarInView(events, view) {
+    const container = document.getElementById('calendar-events');
+    
+    if (!events || events.length === 0) {
+        container.innerHTML = '<div class="no-data">No calendar events found</div>';
+        return;
+    }
+
+    switch (view) {
+        case 'list':
+            this.renderCalendarListView(events, container);
+            break;
+        case 'day':
+            this.renderCalendarDayView(events, container);
+            break;
+        case 'week':
+            this.renderCalendarWeekView(events, container);
+            break;
+        case 'month':
+            this.renderCalendarMonthView(events, container);
+            break;
+        default:
+            this.renderCalendarListView(events, container);
+    }
+}
+
+renderCalendarListView(events, container) {
+    container.className = 'calendar-container calendar-list-view';
+    container.innerHTML = events.map(event => `
+        <div class="calendar-event">
+            <div class="event-title">${event.summary || 'No Title'}</div>
+            <div class="event-time">${this.formatEventTime(event.start)} - ${this.formatEventTime(event.end)}</div>
+            ${event.location ? `<div class="event-location"><i class="fas fa-map-marker-alt"></i> ${event.location}</div>` : ''}
+            ${event.description ? `<div class="event-description">${event.description}</div>` : ''}
+            ${event.attendees ? `<div class="event-attendees"><i class="fas fa-users"></i> ${event.attendees.length} attendee(s)</div>` : ''}
+        </div>
+    `).join('');
+}
+
+renderCalendarDayView(events, container) {
+    container.className = 'calendar-container calendar-day-view';
+    const targetDate = this.currentCalendarDate || new Date();
+    const dayEvents = events.filter(event => {
+        const eventDate = new Date(event.start.dateTime || event.start.date);
+        return eventDate.toDateString() === targetDate.toDateString();
+    });
+
+    let html = `
+        <div class="day-header">
+            ${targetDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+        </div>
+        <div class="day-timeline">
+            <div class="hour-labels">
+    `;
+
+    // Generate hour labels
+    for (let hour = 0; hour < 24; hour++) {
+        const timeStr = hour === 0 ? '12 AM' : hour < 12 ? 
+            `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`;
+        html += `<div class="hour-label">${timeStr}</div>`;
+    }
+
+    html += `</div><div class="day-events">`;
+
+    // Add events
+    dayEvents.forEach(event => {
+        const startTime = new Date(event.start.dateTime);
+        const endTime = new Date(event.end.dateTime);
+        const startHour = startTime.getHours() + (startTime.getMinutes() / 60);
+        const duration = (endTime - startTime) / (1000 * 60 * 60); // hours
+        
+        html += `
+            <div class="day-event" style="top: ${startHour * 60}px; height: ${duration * 60}px;">
+                <div class="event-title">${event.summary}</div>
+                <div class="event-time">${this.formatEventTime(event.start)}</div>
+            </div>
+        `;
+    });
+
+    html += `</div></div>`;
+    container.innerHTML = html;
+}
+
+renderCalendarWeekView(events, container) {
     }
 
     renderCalendarEvents(events) {

@@ -286,7 +286,8 @@ body {
     cursor: pointer;
     transition: background-color 0.3s;
     display: flex;
-    align-items: center;
+    flex-direction: column;   /* ⬅️ stack vertically */
+    align-items: flex-start;
     gap: 15px;
 }
 
