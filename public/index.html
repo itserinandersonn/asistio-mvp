@@ -99,40 +99,64 @@
                     <div class="email-controls">
                         <input type="text" id="email-search" placeholder="Search emails...">
                         <button id="refresh-emails"><i class="fas fa-sync-alt"></i> Refresh</button>
+                        <button id="back-to-list" class="btn btn-secondary" style="display: none;">
+                            <i class="fas fa-arrow-left"></i> Back to List
+                        </button>
                     </div>
                 </div>
-                <div id="emails-list" class="emails-container">
-                    <div class="loading">Loading emails...</div>
+                
+                <!-- Email List View -->
+                <div id="email-list-view">
+                    <div id="emails-list" class="emails-container">
+                        <div class="loading">Loading emails...</div>
+                    </div>
+                    <div id="email-pagination" class="pagination">
+                        <!-- Pagination will be inserted here -->
+                    </div>
                 </div>
-                <div id="email-pagination" class="pagination">
-                    <!-- Pagination will be inserted here -->
+                
+                <!-- Email Detail View -->
+                <div id="email-detail-view" class="email-detail-container" style="display: none;">
+                    <div class="email-detail-header">
+                        <div class="email-detail-subject">
+                            <h3 id="detail-email-subject">Email Subject</h3>
+                        </div>
+                        <div class="email-detail-actions">
+                            <button id="detail-reply-btn" class="btn btn-primary"><i class="fas fa-reply"></i> Reply</button>
+                            <button id="detail-forward-btn" class="btn btn-primary"><i class="fas fa-share"></i> Forward</button>
+                            <button id="detail-schedule-meeting-btn" class="btn btn-success"><i class="fas fa-calendar-plus"></i> Schedule Meeting</button>
+                            <button id="detail-archive-btn" class="btn btn-secondary"><i class="fas fa-archive"></i> Archive</button>
+                            <button id="detail-delete-btn" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
+                        </div>
+                    </div>
+                    
+                    <div class="email-detail-meta">
+                        <div class="meta-row">
+                            <span class="meta-label">From:</span>
+                            <span id="detail-email-from" class="meta-value">sender@example.com</span>
+                        </div>
+                        <div class="meta-row">
+                            <span class="meta-label">To:</span>
+                            <span id="detail-email-to" class="meta-value">recipient@example.com</span>
+                        </div>
+                        <div class="meta-row" id="detail-email-cc-row" style="display: none;">
+                            <span class="meta-label">CC:</span>
+                            <span id="detail-email-cc" class="meta-value">cc@example.com</span>
+                        </div>
+                        <div class="meta-row">
+                            <span class="meta-label">Date:</span>
+                            <span id="detail-email-date" class="meta-value">Date</span>
+                        </div>
+                    </div>
+                    
+                    <div class="email-detail-body">
+                        <div id="detail-email-body" class="email-content">
+                            Email content will appear here...
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Email Detail Modal -->
-            <div id="email-modal" class="modal">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h3 id="email-subject">Email Subject</h3>
-                        <span class="close">&times;</span>
-                    </div>
-                    <div class="modal-body">
-                        <div class="email-meta">
-                            <p><strong>From:</strong> <span id="email-from"></span></p>
-                            <p><strong>To:</strong> <span id="email-to"></span></p>
-                            <p><strong>Date:</strong> <span id="email-date"></span></p>
-                            <p id="email-cc-row" style="display: none;"><strong>CC:</strong> <span id="email-cc"></span></p>
-                        </div>
-                        <div id="email-body" class="email-body"></div>
-                        <div class="email-actions">
-                            <button id="reply-btn" class="btn btn-primary"><i class="fas fa-reply"></i> Reply</button>
-                            <button id="forward-btn" class="btn btn-primary"><i class="fas fa-share"></i> Forward</button>
-                            <button id="archive-btn" class="btn btn-secondary"><i class="fas fa-archive"></i> Archive</button>
-                            <button id="delete-btn" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- Calendar Page -->
             <div id="calendar-page" class="page">
