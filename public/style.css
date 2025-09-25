@@ -559,17 +559,29 @@ body {
 .detail-body {
     line-height: 1.6;
     color: #333;
+    margin-bottom: 20px;
 }
 
 .detail-actions {
     margin-top: 20px;
     padding-top: 15px;
     border-top: 1px solid #f1f3f4;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-start;
 }
 
 .btn-sm {
     padding: 6px 12px;
     font-size: 12px;
+    white-space: nowrap;
 }
 
 /* Column 4: Right Panel (Calendar & Travel Split Vertically) */
@@ -620,6 +632,45 @@ body {
     gap: 8px;
 }
 
+.calendar-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.calendar-day-switcher {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.day-nav-btn {
+    background: #3498db;
+    color: white;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+    font-size: 11px;
+}
+
+.day-nav-btn:hover {
+    background: #2980b9;
+}
+
+#current-day-display {
+    font-size: 12px;
+    font-weight: 500;
+    color: #2c3e50;
+    min-width: 70px;
+    text-align: center;
+}
+
 .view-all-link {
     color: #3498db;
     text-decoration: none;
@@ -668,6 +719,118 @@ body {
 .event-location-compact {
     font-size: 11px;
     color: #888;
+}
+
+/* ==================== SNOOZE MODAL ==================== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    backdrop-filter: blur(5px);
+}
+
+.modal {
+    background: white;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from { transform: scale(0.8) translateY(-50px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px 25px;
+    border-radius: 15px 15px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.modal-close {
+    font-size: 24px;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.3s;
+}
+
+.modal-close:hover {
+    opacity: 1;
+}
+
+.modal-body {
+    padding: 25px;
+}
+
+.snooze-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.snooze-option {
+    padding: 15px;
+    border: 2px solid #e9ecef;
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 500;
+}
+
+.snooze-option:hover {
+    border-color: #3498db;
+    background: #f8f9fa;
+}
+
+.custom-snooze {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+}
+
+.custom-snooze label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #333;
+}
+
+.custom-snooze input {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+.custom-snooze input:focus {
+    outline: none;
+    border-color: #3498db;
 }
 
 /* Responsive Design */
@@ -1173,6 +1336,38 @@ body {
 
 .btn-secondary {
     background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+.btn-success {
+    background: #27ae60;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #229954;
+}
+
+.btn-danger {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c0392b;
+}
+
+.btn-warning {
+    background: #f39c12;
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #e67e22;
 }
 
 /* ==================== SETTINGS ==================== */
@@ -1361,5 +1556,13 @@ body {
     
     #email-search {
         width: 100%;
+    }
+    
+    .detail-actions {
+        flex-direction: column;
+    }
+    
+    .snooze-options {
+        grid-template-columns: 1fr;
     }
 }

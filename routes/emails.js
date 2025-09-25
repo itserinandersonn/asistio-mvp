@@ -4,13 +4,13 @@ const router = express.Router();
 const { isAuthenticated } = require('../middleware/auth');
 const GmailService = require('../services/gmailService');
 
-// Get emails with pagination
+// Get emails with pagination and optional query
 router.get('/', isAuthenticated, async (req, res) => {
   try {
-    const { page = 1, pageToken } = req.query;
+    const { page = 1, pageToken, q, maxResults = 50 } = req.query;
     const gmailService = new GmailService(req.user.accessToken);
     
-    const result = await gmailService.getEmails(pageToken, 50);
+    const result = await gmailService.getEmails(pageToken, parseInt(maxResults), q);
     
     res.json({
       success: true,
@@ -62,6 +62,20 @@ router.post('/:id/archive', isAuthenticated, async (req, res) => {
   } catch (error) {
     console.error('Error archiving email:', error);
     res.status(500).json({ error: 'Failed to archive email' });
+  }
+});
+
+// Snooze email
+router.post('/:id/snooze', isAuthenticated, async (req, res) => {
+  try {
+    const { snoozeUntil } = req.body;
+    const gmailService = new GmailService(req.user.accessToken);
+    await gmailService.snoozeEmail(req.params.id, snoozeUntil);
+    
+    res.json({ success: true, message: 'Email snoozed successfully' });
+  } catch (error) {
+    console.error('Error snoozing email:', error);
+    res.status(500).json({ error: 'Failed to snooze email' });
   }
 });
 

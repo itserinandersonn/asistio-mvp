@@ -8,13 +8,19 @@ class GmailService {
     this.gmail = google.gmail({ version: 'v1', auth: oauth2Client });
   }
 
-  async getEmails(pageToken = null, maxResults = 50) {
+  async getEmails(pageToken = null, maxResults = 50, query = null) {
     try {
-      const response = await this.gmail.users.messages.list({
+      const params = {
         userId: 'me',
         maxResults: maxResults,
         pageToken: pageToken
-      });
+      };
+      
+      if (query) {
+        params.q = query;
+      }
+
+      const response = await this.gmail.users.messages.list(params);
 
       const messages = response.data.messages || [];
       const emailDetails = await Promise.all(
@@ -124,6 +130,55 @@ class GmailService {
       return { success: true };
     } catch (error) {
       console.error('Error archiving email:', error);
+      throw error;
+    }
+  }
+
+  async snoozeEmail(messageId, snoozeUntil) {
+    try {
+      // Convert snoozeUntil to the timestamp format Gmail expects
+      const snoozeTimestamp = Math.floor(new Date(snoozeUntil).getTime() / 1000);
+      
+      // Remove from inbox and add snooze label
+      await this.gmail.users.messages.modify({
+        userId: 'me',
+        id: messageId,
+        resource: {
+          removeLabelIds: ['INBOX'],
+          addLabelIds: ['SNOOZED']
+        }
+      });
+
+      // Note: The actual snooze functionality in Gmail API requires special handling
+      // For now, we'll simulate it by removing from inbox and adding a snooze label
+      // In a production environment, you'd want to implement a scheduler to bring
+      // the email back to the inbox at the specified time
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error snoozing email:', error);
+      throw error;
+    }
+  }
+
+  async replyToEmail(messageId, replyContent) {
+    try {
+      // This method would be used if implementing direct reply functionality
+      // For now, we'll redirect to Gmail's compose interface
+      return { success: true, redirectToGmail: true };
+    } catch (error) {
+      console.error('Error replying to email:', error);
+      throw error;
+    }
+  }
+
+  async forwardEmail(messageId, forwardContent) {
+    try {
+      // This method would be used if implementing direct forward functionality
+      // For now, we'll redirect to Gmail's compose interface
+      return { success: true, redirectToGmail: true };
+    } catch (error) {
+      console.error('Error forwarding email:', error);
       throw error;
     }
   }

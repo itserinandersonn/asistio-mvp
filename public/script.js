@@ -10,6 +10,7 @@ class ExecutiveAssistant {
         this.pageToken = null;
         this.currentCalendarView = 'list';
         this.currentCalendarDate = new Date();
+        this.currentDashboardDate = new Date(); // For dashboard calendar day switching
         this.currentEvents = [];
         this.currentEmailId = null;
         this.currentEmail = null;
@@ -51,6 +52,22 @@ class ExecutiveAssistant {
             });
         });
 
+        // Folder navigation in dashboard
+        document.querySelectorAll('.folder-item').forEach(folder => {
+            folder.addEventListener('click', (e) => {
+                const folderType = e.target.closest('.folder-item').dataset.folder;
+                this.selectFolder(folderType);
+            });
+        });
+
+        // Label filtering in dashboard
+        document.querySelectorAll('.label-item').forEach(label => {
+            label.addEventListener('click', (e) => {
+                const labelText = e.target.closest('.label-item').textContent.trim();
+                this.filterByLabel(labelText);
+            });
+        });
+
         // Back to email list button
         document.getElementById('back-to-list').addEventListener('click', () => {
             this.showEmailList();
@@ -67,6 +84,23 @@ class ExecutiveAssistant {
 
         document.getElementById('detail-schedule-meeting-btn').addEventListener('click', () => {
             this.scheduleFromEmail();
+        });
+
+        document.getElementById('detail-reply-btn').addEventListener('click', () => {
+            this.replyToEmail();
+        });
+
+        document.getElementById('detail-forward-btn').addEventListener('click', () => {
+            this.forwardEmail();
+        });
+
+        // Dashboard calendar day navigation
+        document.getElementById('prev-day-btn').addEventListener('click', () => {
+            this.navigateDashboardDay(-1);
+        });
+
+        document.getElementById('next-day-btn').addEventListener('click', () => {
+            this.navigateDashboardDay(1);
         });
 
         // Email search
@@ -94,6 +128,41 @@ class ExecutiveAssistant {
 
         document.getElementById('calendar-next').addEventListener('click', () => {
             this.navigateCalendar(1);
+        });
+
+        // Snooze modal
+        this.setupSnoozeModal();
+    }
+
+    setupSnoozeModal() {
+        // Snooze modal close
+        document.querySelector('#snooze-modal .modal-close').addEventListener('click', () => {
+            this.closeSnoozeModal();
+        });
+
+        // Snooze option buttons
+        document.querySelectorAll('.snooze-option').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const hours = parseInt(e.target.dataset.hours);
+                this.snoozeEmail(hours);
+            });
+        });
+
+        // Custom snooze
+        document.getElementById('custom-snooze-btn').addEventListener('click', () => {
+            const customTime = document.getElementById('custom-snooze-time').value;
+            if (customTime) {
+                const snoozeDate = new Date(customTime);
+                const hoursFromNow = (snoozeDate - new Date()) / (1000 * 60 * 60);
+                this.snoozeEmail(hoursFromNow, snoozeDate);
+            }
+        });
+
+        // Close modal when clicking outside
+        document.getElementById('snooze-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'snooze-modal') {
+                this.closeSnoozeModal();
+            }
         });
     }
 
@@ -184,6 +253,224 @@ class ExecutiveAssistant {
             case 'travel':
                 await this.loadTravelData();
                 break;
+        }
+    }
+
+    // Folder and label management
+    async selectFolder(folderType) {
+        // Update active folder state
+        document.querySelectorAll('.folder-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        document.querySelector(`[data-folder="${folderType}"]`).classList.add('active');
+
+        this.currentFolder = folderType;
+        await this.loadEmailsForFolder(folderType);
+    }
+
+    async loadEmailsForFolder(folderType) {
+        try {
+            this.showLoading('dashboard-emails-list', 'Loading emails...');
+            
+            let query = '';
+            switch (folderType) {
+                case 'inbox':
+                    query = 'in:inbox';
+                    break;
+                case 'sent':
+                    query = 'in:sent';
+                    break;
+                case 'drafts':
+                    query = 'in:drafts';
+                    break;
+                case 'archive':
+                    query = 'in:all -in:inbox -in:sent -in:drafts -in:trash';
+                    break;
+                case 'trash':
+                    query = 'in:trash';
+                    break;
+                default:
+                    query = 'in:inbox';
+            }
+
+            const response = await fetch(`/api/emails?q=${encodeURIComponent(query)}&maxResults=20`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.renderDashboardEmails(data.emails);
+                this.updateFolderCounts(data.totalResults);
+            }
+        } catch (error) {
+            console.error('Error loading folder emails:', error);
+            document.getElementById('dashboard-emails-list').innerHTML = '<div class="no-data">Failed to load emails</div>';
+        }
+    }
+
+    async filterByLabel(labelName) {
+        try {
+            this.showLoading('dashboard-emails-list', 'Loading emails...');
+            
+            // Map label names to Gmail label queries
+            let labelQuery = '';
+            switch (labelName.toLowerCase()) {
+                case 'important':
+                    labelQuery = 'is:important';
+                    break;
+                case 'work':
+                    labelQuery = 'label:work';
+                    break;
+                case 'personal':
+                    labelQuery = 'label:personal';
+                    break;
+                case 'travel':
+                    labelQuery = 'label:travel';
+                    break;
+                default:
+                    labelQuery = `label:${labelName.toLowerCase()}`;
+            }
+
+            const response = await fetch(`/api/emails?q=${encodeURIComponent(labelQuery)}&maxResults=20`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.renderDashboardEmails(data.emails);
+            }
+        } catch (error) {
+            console.error('Error filtering emails by label:', error);
+            document.getElementById('dashboard-emails-list').innerHTML = '<div class="no-data">Failed to load emails</div>';
+        }
+    }
+
+    updateFolderCounts(totalCount) {
+        // Update the folder count display (this would ideally come from the API)
+        const currentFolder = document.querySelector('.folder-item.active .folder-count');
+        if (currentFolder && totalCount) {
+            currentFolder.textContent = Math.min(totalCount, 99); // Limit display to 99+
+        }
+    }
+        this.currentDashboardDate.setDate(this.currentDashboardDate.getDate() + direction);
+        this.updateDashboardDayDisplay();
+        this.loadDashboardCalendar();
+    }
+    
+
+    // Dashboard calendar day navigation
+    navigateDashboardDay(direction) {
+        this.currentDashboardDate.setDate(this.currentDashboardDate.getDate() + direction);
+        this.updateDashboardDayDisplay();
+        this.loadDashboardCalendar();
+    }
+
+    updateDashboardDayDisplay() {
+        const today = new Date();
+        const isToday = this.currentDashboardDate.toDateString() === today.toDateString();
+        const isYesterday = this.currentDashboardDate.toDateString() === new Date(today.getTime() - 24*60*60*1000).toDateString();
+        const isTomorrow = this.currentDashboardDate.toDateString() === new Date(today.getTime() + 24*60*60*1000).toDateString();
+        
+        let displayText;
+        if (isToday) {
+            displayText = 'Today';
+        } else if (isYesterday) {
+            displayText = 'Yesterday';
+        } else if (isTomorrow) {
+            displayText = 'Tomorrow';
+        } else {
+            displayText = this.currentDashboardDate.toLocaleDateString('en-US', { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+        }
+        
+        document.getElementById('current-day-display').textContent = displayText;
+    }
+
+    // Email management functions
+    async replyToEmail() {
+        if (!this.currentEmail) return;
+        
+        try {
+            this.showLoadingOverlay('Opening Gmail to reply...');
+            
+            // Create Gmail compose URL with reply parameters
+            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(this.currentEmail.from)}&su=${encodeURIComponent('Re: ' + this.currentEmail.subject)}&tf=1`;
+            
+            // Open in new tab
+            window.open(gmailUrl, '_blank');
+            
+            this.showNotification('Gmail opened in new tab for reply', 'success');
+        } catch (error) {
+            console.error('Error opening reply:', error);
+            this.showNotification('Failed to open reply', 'error');
+        } finally {
+            this.hideLoadingOverlay();
+        }
+    }
+
+    async forwardEmail() {
+        if (!this.currentEmail) return;
+        
+        try {
+            this.showLoadingOverlay('Opening Gmail to forward...');
+            
+            // Create Gmail compose URL with forward parameters
+            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent('Fwd: ' + this.currentEmail.subject)}&body=${encodeURIComponent('---------- Forwarded message ---------\\nFrom: ' + this.currentEmail.from + '\\nSubject: ' + this.currentEmail.subject)}&tf=1`;
+            
+            // Open in new tab
+            window.open(gmailUrl, '_blank');
+            
+            this.showNotification('Gmail opened in new tab for forwarding', 'success');
+        } catch (error) {
+            console.error('Error opening forward:', error);
+            this.showNotification('Failed to open forward', 'error');
+        } finally {
+            this.hideLoadingOverlay();
+        }
+    }
+
+    showSnoozeModal() {
+        document.getElementById('snooze-modal').style.display = 'flex';
+        
+        // Set default custom snooze time to tomorrow at 9 AM
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(9, 0, 0, 0);
+        document.getElementById('custom-snooze-time').value = tomorrow.toISOString().slice(0, 16);
+    }
+
+    closeSnoozeModal() {
+        document.getElementById('snooze-modal').style.display = 'none';
+    }
+
+    async snoozeEmail(hours, customDate = null) {
+        if (!this.currentEmailId) return;
+        
+        try {
+            this.showLoadingOverlay('Snoozing email...');
+            
+            const snoozeUntil = customDate || new Date(Date.now() + hours * 60 * 60 * 1000);
+            
+            const response = await fetch(`/api/emails/${this.currentEmailId}/snooze`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ snoozeUntil: snoozeUntil.toISOString() })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.closeSnoozeModal();
+                this.showEmailList();
+                await this.loadEmails(this.currentEmailPage);
+                this.showNotification(`Email snoozed until ${snoozeUntil.toLocaleString()}`, 'success');
+            }
+        } catch (error) {
+            console.error('Error snoozing email:', error);
+            this.showNotification('Failed to snooze email', 'error');
+        } finally {
+            this.hideLoadingOverlay();
         }
     }
 
