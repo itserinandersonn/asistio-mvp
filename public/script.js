@@ -354,7 +354,7 @@ class ExecutiveAssistant {
     navigateDashboardDay(direction) {
         this.currentDashboardDate.setDate(this.currentDashboardDate.getDate() + direction);
         this.updateDashboardDayDisplay();
-        this.loadDashboardCalendar();
+        this.loadDashboardCalendar(); // This will now load events for the new date
     }
 
     updateDashboardDayDisplay() {
@@ -507,11 +507,18 @@ class ExecutiveAssistant {
 
     async loadDashboardCalendar() {
         try {
-            const response = await fetch('/api/calendar');
+            this.showLoading('dashboard-calendar', 'Loading events...');
+            
+            // Format the date for the API call
+            const dateParam = this.currentDashboardDate.toISOString().split('T')[0];
+            const response = await fetch(`/api/calendar?date=${dateParam}`);
             const data = await response.json();
             
             if (data.success) {
                 this.renderDashboardCalendar(data.events);
+                this.currentEvents = data.events;
+            } else {
+                document.getElementById('dashboard-calendar').innerHTML = '<div class="no-data">Failed to load events</div>';
             }
         } catch (error) {
             console.error('Error loading dashboard calendar:', error);
@@ -527,25 +534,63 @@ class ExecutiveAssistant {
             return;
         }
 
-        // Filter events for the selected dashboard day
-        const targetDate = this.currentDashboardDate.toDateString();
-        const dayEvents = events.filter(event => {
-            const eventDate = new Date(event.start.dateTime || event.start.date);
-            return eventDate.toDateString() === targetDate;
+        // Sort events by start time
+        const sortedEvents = events.sort((a, b) => {
+            const timeA = new Date(a.start.dateTime || a.start.date);
+            const timeB = new Date(b.start.dateTime || b.start.date);
+            return timeA - timeB;
         });
 
-        if (dayEvents.length === 0) {
-            container.innerHTML = '<div class="no-data">No events for this day</div>';
-            return;
-        }
+        container.innerHTML = sortedEvents.map((event, index) => {
+            const startTime = this.formatEventTime(event.start);
+            const endTime = event.end ? this.formatEventTime(event.end) : null;
+            const timeDisplay = endTime && event.start.dateTime ? 
+                `${startTime} - ${endTime.split(' ').pop()}` : startTime;
+            
+            return `
+                <div class="calendar-event-compact" onclick="app.showEventDetails('${event.id}', ${index})" title="Click to view details">
+                    <div class="event-time-compact">${timeDisplay}</div>
+                    <div class="event-title-compact">${event.summary || 'No Title'}</div>
+                    ${event.location ? `<div class="event-location-compact">${event.location}</div>` : ''}
+                </div>
+            `;
+        }).join('');
+    }
 
-        container.innerHTML = dayEvents.slice(0, 8).map(event => `
-            <div class="calendar-event-compact">
-                <div class="event-time-compact">${this.formatEventTime(event.start)}</div>
-                <div class="event-title-compact">${event.summary || 'No Title'}</div>
-                ${event.location ? `<div class="event-location-compact">${event.location}</div>` : ''}
-            </div>
-        `).join('');
+    showEventDetails(eventId, eventIndex) {
+        if (!this.currentEvents || !this.currentEvents[eventIndex]) return;
+        
+        const event = this.currentEvents[eventIndex];
+        const startTime = new Date(event.start.dateTime || event.start.date);
+        const endTime = event.end ? new Date(event.end.dateTime || event.end.date) : null;
+        
+        let timeString = startTime.toLocaleString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: event.start.dateTime ? 'numeric' : undefined,
+            minute: event.start.dateTime ? '2-digit' : undefined,
+            hour12: event.start.dateTime ? true : undefined
+        });
+        
+        if (endTime && event.start.dateTime) {
+            timeString += ` - ${endTime.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            })}`;
+        }
+        
+        const eventDetails = `
+            <strong>${event.summary || 'No Title'}</strong><br>
+            📅 ${timeString}<br>
+            ${event.location ? `📍 ${event.location}<br>` : ''}
+            ${event.description ? `<br>${event.description}` : ''}
+            ${event.attendees && event.attendees.length ? `<br><br>👥 ${event.attendees.length} attendee(s)` : ''}
+        `;
+        
+        this.showNotification(eventDetails, 'info');
     }
 
     async loadDashboardTravel() {
@@ -786,8 +831,403 @@ class ExecutiveAssistant {
         }
     }
 
-    // Continue with remaining methods...
-    // [The rest of the methods remain the same as in your original file]
+    // Additional methods that might be missing - adding the rest of the functionality
+
+    async loadEmails(page = 1) {
+        try {
+            this.showLoading('emails-list', 'Loading emails...');
+            
+            const response = await fetch(`/api/emails?page=${page}&maxResults=20`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.emails = data.emails;
+                this.renderEmails(data.emails);
+                this.renderPagination(data.currentPage, Math.ceil(data.totalResults / 20));
+                this.currentEmailPage = page;
+            }
+        } catch (error) {
+            console.error('Error loading emails:', error);
+            document.getElementById('emails-list').innerHTML = '<div class="no-data">Failed to load emails</div>';
+        }
+    }
+
+    renderEmails(emails) {
+        const container = document.getElementById('emails-list');
+        
+        if (!emails || emails.length === 0) {
+            container.innerHTML = '<div class="no-data">No emails found</div>';
+            return;
+        }
+
+        container.innerHTML = emails.map(email => `
+            <div class="email-item" onclick="app.showEmailDetail('${email.id}')">
+                <div class="email-sender">${this.extractEmailAddress(email.from)}</div>
+                <div class="email-content">
+                    <div class="email-subject">${email.subject || 'No Subject'}</div>
+                    <div class="email-preview">${email.snippet || 'No preview available'}</div>
+                </div>
+                <div class="email-time">${this.formatDate(email.date)}</div>
+            </div>
+        `).join('');
+    }
+
+    async showEmailDetail(emailId) {
+        try {
+            const response = await fetch(`/api/emails/${emailId}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.currentEmail = data.email;
+                this.currentEmailId = emailId;
+                this.displayEmailDetail(data.email);
+                this.showEmailDetailView();
+            }
+        } catch (error) {
+            console.error('Error loading email detail:', error);
+        }
+    }
+
+    displayEmailDetail(email) {
+        document.getElementById('detail-email-subject').textContent = email.subject || 'No Subject';
+        document.getElementById('detail-email-from').textContent = email.from;
+        document.getElementById('detail-email-to').textContent = email.to;
+        document.getElementById('detail-email-date').textContent = this.formatDate(email.date);
+        document.getElementById('detail-email-body').innerHTML = this.sanitizeHTML(email.body);
+        
+        // Show CC if exists
+        if (email.cc) {
+            document.getElementById('detail-email-cc').textContent = email.cc;
+            document.getElementById('detail-email-cc-row').style.display = 'flex';
+        } else {
+            document.getElementById('detail-email-cc-row').style.display = 'none';
+        }
+    }
+
+    showEmailDetailView() {
+        document.getElementById('email-list-view').style.display = 'none';
+        document.getElementById('email-detail-view').style.display = 'block';
+        document.getElementById('back-to-list').style.display = 'inline-flex';
+    }
+
+    showEmailList() {
+        document.getElementById('email-list-view').style.display = 'block';
+        document.getElementById('email-detail-view').style.display = 'none';
+        document.getElementById('back-to-list').style.display = 'none';
+    }
+
+    renderPagination(currentPage, totalPages) {
+        const container = document.getElementById('email-pagination');
+        
+        if (totalPages <= 1) {
+            container.innerHTML = '';
+            return;
+        }
+
+        let html = '<div class="pagination">';
+        
+        // Previous button
+        html += `<button ${currentPage === 1 ? 'disabled' : ''} onclick="app.loadEmails(${currentPage - 1})">Previous</button>`;
+        
+        // Page numbers
+        for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+            html += `<button class="${i === currentPage ? 'active' : ''}" onclick="app.loadEmails(${i})">${i}</button>`;
+        }
+        
+        // Next button
+        html += `<button ${currentPage === totalPages ? 'disabled' : ''} onclick="app.loadEmails(${currentPage + 1})">Next</button>`;
+        
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    async searchEmails(query) {
+        if (query.length < 2) {
+            await this.loadEmails(1);
+            return;
+        }
+
+        try {
+            this.showLoading('emails-list', 'Searching emails...');
+            
+            const response = await fetch(`/api/emails?q=${encodeURIComponent(query)}&maxResults=20`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.renderEmails(data.emails);
+                document.getElementById('email-pagination').innerHTML = '';
+            }
+        } catch (error) {
+            console.error('Error searching emails:', error);
+            document.getElementById('emails-list').innerHTML = '<div class="no-data">Search failed</div>';
+        }
+    }
+
+    async loadCalendarEvents() {
+        try {
+            this.showLoading('calendar-events', 'Loading calendar events...');
+            
+            const response = await fetch('/api/calendar');
+            const data = await response.json();
+            
+            if (data.success) {
+                this.renderCalendarEvents(data.events);
+            }
+        } catch (error) {
+            console.error('Error loading calendar events:', error);
+            document.getElementById('calendar-events').innerHTML = '<div class="no-data">Failed to load events</div>';
+        }
+    }
+
+    renderCalendarEvents(events) {
+        const container = document.getElementById('calendar-events');
+        
+        if (!events || events.length === 0) {
+            container.innerHTML = '<div class="no-data">No upcoming events</div>';
+            return;
+        }
+
+        const eventsHtml = events.map(event => {
+            const startTime = new Date(event.start.dateTime || event.start.date);
+            const endTime = event.end ? new Date(event.end.dateTime || event.end.date) : null;
+            
+            let timeDisplay;
+            if (event.start.date && !event.start.dateTime) {
+                // All day event
+                timeDisplay = startTime.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+            } else {
+                // Time specific event
+                timeDisplay = startTime.toLocaleString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
+                
+                if (endTime) {
+                    timeDisplay += ` - ${endTime.toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    })}`;
+                }
+            }
+            
+            return `
+                <div class="calendar-event">
+                    <div class="event-time">${timeDisplay}</div>
+                    <div class="event-title">${event.summary || 'No Title'}</div>
+                    ${event.location ? `<div class="event-location">📍 ${event.location}</div>` : ''}
+                    ${event.description ? `<div class="event-description">${event.description}</div>` : ''}
+                </div>
+            `;
+        }).join('');
+        
+        container.innerHTML = `<div class="calendar-list-view">${eventsHtml}</div>`;
+    }
+
+    changeCalendarView(view) {
+        // Update active view button
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelector(`[data-view="${view}"]`).classList.add('active');
+        
+        this.currentCalendarView = view;
+        this.renderCalendarInView(view);
+    }
+
+    renderCalendarInView(view) {
+        // This would render the calendar in different views (day, week, month)
+        // For now, we'll just show the list view
+        this.loadCalendarEvents();
+    }
+
+    navigateCalendar(direction) {
+        const currentDate = this.currentCalendarDate;
+        
+        switch (this.currentCalendarView) {
+            case 'day':
+                currentDate.setDate(currentDate.getDate() + direction);
+                break;
+            case 'week':
+                currentDate.setDate(currentDate.getDate() + (direction * 7));
+                break;
+            case 'month':
+                currentDate.setMonth(currentDate.getMonth() + direction);
+                break;
+            default:
+                // For list view, just reload
+                break;
+        }
+        
+        this.updateCalendarTitle();
+        this.loadCalendarEvents();
+    }
+
+    updateCalendarTitle() {
+        const titleElement = document.getElementById('calendar-title');
+        const currentDate = this.currentCalendarDate;
+        
+        switch (this.currentCalendarView) {
+            case 'day':
+                titleElement.textContent = currentDate.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+                break;
+            case 'week':
+                const weekStart = new Date(currentDate);
+                weekStart.setDate(currentDate.getDate() - currentDate.getDay());
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekStart.getDate() + 6);
+                titleElement.textContent = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+                break;
+            case 'month':
+                titleElement.textContent = currentDate.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long'
+                });
+                break;
+            default:
+                titleElement.textContent = 'Upcoming Events';
+        }
+    }
+
+    async loadTravelData() {
+        const container = document.getElementById('travel-options');
+        container.innerHTML = '<div class="no-data">No travel information available</div>';
+    }
+
+    extractMeetingTitle(email) {
+        if (!email) return 'Meeting';
+        
+        const subject = email.subject || 'Meeting';
+        
+        // Remove common email prefixes
+        return subject
+            .replace(/^(re:|fwd?:|fw:)\s*/i, '')
+            .trim() || 'Meeting';
+    }
+
+    showScheduleMeetingPopup(email, analysis) {
+        const extractedData = analysis.extractedData || {};
+        
+        // Create a simple form popup for scheduling
+        const popup = document.createElement('div');
+        popup.className = 'modal-overlay';
+        popup.innerHTML = `
+            <div class="modal">
+                <div class="modal-header">
+                    <h3><i class="fas fa-calendar-plus"></i> Schedule Meeting</h3>
+                    <span class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <form id="meeting-form">
+                        <div style="margin-bottom: 15px;">
+                            <label>Meeting Title:</label>
+                            <input type="text" id="meeting-title" value="${extractedData.summary || this.extractMeetingTitle(email)}" style="width: 100%; padding: 8px; margin-top: 5px;">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label>Start Date & Time:</label>
+                            <input type="datetime-local" id="meeting-start" style="width: 100%; padding: 8px; margin-top: 5px;">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label>End Date & Time:</label>
+                            <input type="datetime-local" id="meeting-end" style="width: 100%; padding: 8px; margin-top: 5px;">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label>Location:</label>
+                            <input type="text" id="meeting-location" value="${extractedData.location || 'Google Meet'}" style="width: 100%; padding: 8px; margin-top: 5px;">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label>Description:</label>
+                            <textarea id="meeting-description" style="width: 100%; padding: 8px; margin-top: 5px; height: 80px;">${extractedData.description || ''}</textarea>
+                        </div>
+                        <div style="text-align: center; margin-top: 20px;">
+                            <button type="submit" class="btn btn-success">Create Meeting</button>
+                            <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="margin-left: 10px;">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(popup);
+        
+        // Set default times (next hour for 1 hour duration)
+        const now = new Date();
+        const nextHour = new Date(now.getTime() + 60 * 60 * 1000);
+        nextHour.setMinutes(0);
+        const endTime = new Date(nextHour.getTime() + 60 * 60 * 1000);
+        
+        document.getElementById('meeting-start').value = nextHour.toISOString().slice(0, 16);
+        document.getElementById('meeting-end').value = endTime.toISOString().slice(0, 16);
+        
+        // Handle form submission
+        document.getElementById('meeting-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await this.createMeetingFromForm(popup);
+        });
+        
+        // Close popup when clicking outside
+        popup.addEventListener('click', (e) => {
+            if (e.target === popup) {
+                popup.remove();
+            }
+        });
+    }
+
+    async createMeetingFromForm(popup) {
+        try {
+            this.showLoadingOverlay('Creating calendar event...');
+            
+            const formData = {
+                summary: document.getElementById('meeting-title').value,
+                startTime: document.getElementById('meeting-start').value,
+                endTime: document.getElementById('meeting-end').value,
+                location: document.getElementById('meeting-location').value,
+                description: document.getElementById('meeting-description').value
+            };
+            
+            const response = await fetch('/api/calendar', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                popup.remove();
+                this.showNotification('Meeting created successfully!', 'success');
+                
+                // Reload calendar data if on dashboard
+                if (this.currentPage === 'dashboard') {
+                    await this.loadDashboardCalendar();
+                }
+            } else {
+                this.showNotification('Failed to create meeting', 'error');
+            }
+        } catch (error) {
+            console.error('Error creating meeting:', error);
+            this.showNotification('Failed to create meeting', 'error');
+        } finally {
+            this.hideLoadingOverlay();
+        }
+    }
 
     // Utility Methods
     extractEmailAddress(emailString) {
@@ -812,23 +1252,21 @@ class ExecutiveAssistant {
     formatEventTime(eventTime) {
         try {
             const date = new Date(eventTime.dateTime || eventTime.date);
-            if (eventTime.date) {
-                return date.toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric'
-                });
+            
+            if (eventTime.date && !eventTime.dateTime) {
+                // All-day event
+                return 'All day';
             } else {
-                return date.toLocaleString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
+                // Time-specific event
+                return date.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
                 });
             }
         } catch (error) {
-            return eventTime.dateTime || eventTime.date || 'Unknown time';
+            console.error('Error formatting event time:', error);
+            return 'Time unavailable';
         }
     }
 
@@ -881,14 +1319,20 @@ class ExecutiveAssistant {
                     color: white;
                     z-index: 1000;
                     animation: slideInRight 0.3s ease-out;
+                    max-width: 350px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
                 }
                 .notification-success { background: #27ae60; }
                 .notification-error { background: #e74c3c; }
                 .notification-info { background: #3498db; }
                 .notification-content {
                     display: flex;
-                    align-items: center;
+                    align-items: flex-start;
                     gap: 10px;
+                }
+                .notification-content span {
+                    line-height: 1.4;
+                    font-size: 13px;
                 }
                 @keyframes slideInRight {
                     from { transform: translateX(100%); opacity: 0; }
@@ -907,7 +1351,7 @@ class ExecutiveAssistant {
                     notification.parentNode.removeChild(notification);
                 }
             }, 300);
-        }, 5000);
+        }, type === 'info' ? 7000 : 5000); // Show info notifications longer
     }
 }
 

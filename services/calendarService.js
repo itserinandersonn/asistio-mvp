@@ -25,6 +25,32 @@ class CalendarService {
     }
   }
 
+  // New method to get events for a specific day
+  async getEventsForDay(date, maxResults = 20) {
+    try {
+      // Create start and end of day timestamps
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const response = await this.calendar.events.list({
+        calendarId: 'primary',
+        timeMin: startOfDay.toISOString(),
+        timeMax: endOfDay.toISOString(),
+        maxResults: maxResults,
+        singleEvents: true,
+        orderBy: 'startTime'
+      });
+
+      return response.data.items || [];
+    } catch (error) {
+      console.error('Error fetching calendar events for day:', error);
+      throw error;
+    }
+  }
+
   async createEvent(eventData) {
     try {
       const event = {

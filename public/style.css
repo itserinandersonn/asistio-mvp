@@ -693,9 +693,21 @@ body {
     height: 100%;
 }
 
+/* Enhanced Calendar Event Styles */
 .calendar-event-compact {
     padding: 12px 0;
     border-bottom: 1px solid #f1f3f4;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.calendar-event-compact:hover {
+    background: #f8f9fa;
+    padding-left: 8px;
+    padding-right: 8px;
+    margin-left: -8px;
+    margin-right: -8px;
+    border-radius: 4px;
 }
 
 .calendar-event-compact:last-child {
@@ -706,7 +718,9 @@ body {
     font-size: 11px;
     color: #666;
     margin-bottom: 4px;
-    font-weight: 500;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .event-title-compact {
@@ -714,11 +728,20 @@ body {
     color: #333;
     font-weight: 500;
     margin-bottom: 2px;
+    line-height: 1.3;
 }
 
 .event-location-compact {
     font-size: 11px;
     color: #888;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.event-location-compact:before {
+    content: '📍';
+    font-size: 10px;
 }
 
 /* ==================== SNOOZE MODAL ==================== */
@@ -1164,151 +1187,30 @@ body {
     border-radius: 0 8px 8px 0;
 }
 
-/* Day View */
-.calendar-day-view {
-    display: grid;
-    grid-template-rows: auto 1fr;
-    height: 600px;
-}
-
-.day-header {
-    text-align: center;
-    padding: 15px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #e9ecef;
-    font-weight: 600;
-}
-
-.day-timeline {
-    display: grid;
-    grid-template-columns: 60px 1fr;
-    overflow-y: auto;
-}
-
-.hour-labels {
-    background: #f8f9fa;
-    border-right: 1px solid #e9ecef;
-}
-
-.hour-label {
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
+.calendar-event .event-time {
+    font-size: 13px;
     color: #666;
-    border-bottom: 1px solid #f1f3f4;
+    margin-bottom: 8px;
+    font-weight: 500;
 }
 
-.day-events {
-    position: relative;
-}
-
-.day-event {
-    position: absolute;
-    left: 5px;
-    right: 5px;
-    background: #3498db;
-    color: white;
-    padding: 5px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    overflow: hidden;
-    cursor: pointer;
-}
-
-/* Week View */
-.calendar-week-view {
-    display: grid;
-    grid-template-columns: 60px repeat(7, 1fr);
-    height: 600px;
-    overflow: auto;
-}
-
-.week-day-header {
-    text-align: center;
-    padding: 10px 5px;
-    background: #f8f9fa;
-    border-right: 1px solid #e9ecef;
-    border-bottom: 1px solid #e9ecef;
-    font-weight: 600;
-    font-size: 14px;
-}
-
-.week-day-column {
-    border-right: 1px solid #e9ecef;
-    position: relative;
-}
-
-/* Month View */
-.calendar-month-view {
-    display: grid;
-    grid-template-rows: auto 1fr;
-    height: 600px;
-}
-
-.month-header {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    background: #f8f9fa;
-    border-bottom: 1px solid #e9ecef;
-}
-
-.month-day-header {
-    text-align: center;
-    padding: 12px 5px;
-    font-weight: 600;
-    color: #666;
-    border-right: 1px solid #e9ecef;
-}
-
-.month-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    grid-template-rows: repeat(6, 1fr);
-}
-
-.month-day {
-    border: 1px solid #f1f3f4;
-    padding: 8px;
-    min-height: 80px;
-    background: white;
-    position: relative;
-}
-
-.month-day.other-month {
-    background: #f8f9fa;
-    color: #999;
-}
-
-.month-day.today {
-    background: #e3f2fd;
-}
-
-.month-day-number {
+.calendar-event .event-title {
+    font-size: 16px;
+    color: #2c3e50;
     font-weight: 600;
     margin-bottom: 5px;
 }
 
-.month-event {
-    background: #3498db;
-    color: white;
-    padding: 2px 4px;
-    border-radius: 3px;
-    font-size: 10px;
-    margin: 1px 0;
-    cursor: pointer;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+.calendar-event .event-location {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 5px;
 }
 
-.calendar-event {
-    padding: 15px;
-    border-left: 4px solid #3498db;
-    margin-bottom: 15px;
-    background: #f8f9fa;
-    border-radius: 0 8px 8px 0;
+.calendar-event .event-description {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.4;
 }
 
 /* ==================== BUTTON STYLES ==================== */

@@ -7,8 +7,18 @@ const CalendarService = require('../services/calendarService');
 // Get upcoming calendar events
 router.get('/', isAuthenticated, async (req, res) => {
   try {
+    const { date } = req.query;
     const calendarService = new CalendarService(req.user.accessToken);
-    const events = await calendarService.getUpcomingEvents(10);
+    
+    let events;
+    if (date) {
+      // Get events for a specific day
+      const targetDate = new Date(date);
+      events = await calendarService.getEventsForDay(targetDate, 20);
+    } else {
+      // Get upcoming events
+      events = await calendarService.getUpcomingEvents(10);
+    }
     
     res.json({
       success: true,
@@ -36,4 +46,4 @@ router.post('/', isAuthenticated, async (req, res) => {
   }
 });
 
-module.exports = router;
+module.exports = router; 
