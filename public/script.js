@@ -1353,6 +1353,88 @@ class ExecutiveAssistant {
             }, 300);
         }, type === 'info' ? 7000 : 5000); // Show info notifications longer
     }
+
+    // Add this method to your ExecutiveAssistant class in script.js
+
+async testCalendarAPI() {
+    try {
+        console.log('Testing Calendar API...');
+        this.showLoadingOverlay('Testing Calendar API...');
+        
+        const response = await fetch('/api/calendar/test');
+        const data = await response.json();
+        
+        console.log('Calendar API Test Result:', data);
+        
+        if (data.success) {
+            this.showNotification('Calendar API test passed! Check console for details.', 'success');
+        } else {
+            this.showNotification(`Calendar API test failed at step: ${data.step}. Error: ${data.error}`, 'error');
+            console.error('Calendar API Test Details:', data.details);
+        }
+        
+    } catch (error) {
+        console.error('Error testing Calendar API:', error);
+        this.showNotification('Calendar API test request failed', 'error');
+    } finally {
+        this.hideLoadingOverlay();
+    }
+}
+
+// Also add this method to debug dashboard calendar loading specifically
+async debugDashboardCalendar() {
+    try {
+        console.log('=== DEBUG DASHBOARD CALENDAR ===');
+        console.log('Current dashboard date:', this.currentDashboardDate);
+        
+        const dateParam = this.currentDashboardDate.toISOString().split('T')[0];
+        console.log('Date parameter for API:', dateParam);
+        
+        this.showLoadingOverlay('Debugging calendar...');
+        
+        const response = await fetch(`/api/calendar?date=${dateParam}`);
+        console.log('API Response status:', response.status);
+        console.log('API Response headers:', response.headers);
+        
+        const data = await response.json();
+        console.log('API Response data:', data);
+        
+        if (response.ok && data.success) {
+            console.log('✅ API call successful');
+            console.log('Events returned:', data.events?.length || 0);
+            
+            if (data.events && data.events.length > 0) {
+                console.log('Event details:');
+                data.events.forEach((event, index) => {
+                    console.log(`Event ${index + 1}:`, {
+                        id: event.id,
+                        summary: event.summary,
+                        start: event.start,
+                        end: event.end,
+                        location: event.location
+                    });
+                });
+            } else {
+                console.log('⚠️ No events found for this date');
+            }
+            
+            this.showNotification(`Calendar debug complete. Found ${data.events?.length || 0} events.`, 'info');
+        } else {
+            console.error('❌ API call failed');
+            console.error('Error details:', data);
+            this.showNotification(`Calendar debug failed: ${data.error || 'Unknown error'}`, 'error');
+        }
+        
+    } catch (error) {
+        console.error('❌ Debug request failed:', error);
+        this.showNotification('Calendar debug request failed', 'error');
+    } finally {
+        this.hideLoadingOverlay();
+    }
+}
+
+// Add this to setupEventListeners method or call it from browser console
+// You can add a temporary button to the dashboard for testing:
 }
 
 // Initialize the application
